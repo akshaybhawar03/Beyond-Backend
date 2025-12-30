@@ -38,23 +38,26 @@ app.get("/", (req, res) => {
   res.send("BeyondChats Backend Running 🚀");
 });
 
-async function start() {
-  try {
-    if (!MONGODB_URI) {
-      console.error("❌ Missing MONGODB_URI in server/.env");
-      process.exit(1);
-    }
-
-    await mongoose.connect(MONGODB_URI);
-    console.log("✅ MongoDB connected successfully");
-
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
-    });
-  } catch (err) {
-    console.error("❌ MongoDB connection failed:", err.message);
-    process.exit(1);
+function connectToMongoWithRetry(delayMs = 5000) {
+  if (!MONGODB_URI) {
+    console.error("MongoDB connection failed", new Error("Missing MONGODB_URI"));
+    return;
   }
+
+  mongoose
+    .connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 10000,
+    })
+    .then(() => {
+      console.log("MongoDB connected successfully");
+    })
+    .catch((err) => {
+      console.error("MongoDB connection failed", err);
+      setTimeout(() => connectToMongoWithRetry(delayMs), delayMs);
+    });
 }
 
-start();
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+  connectToMongoWithRetry();
+});
