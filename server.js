@@ -11,15 +11,25 @@ const allowedOrigins = (process.env.CORS_ORIGIN || process.env.FRONTEND_URL || "
   .map((s) => s.trim())
   .filter(Boolean);
 
+function isVercelAppOrigin(origin) {
+  try {
+    const url = new URL(origin);
+    return typeof url.hostname === "string" && url.hostname.endsWith(".vercel.app");
+  } catch (_) {
+    return false;
+  }
+}
+
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes("*")) return callback(null, true);
+      if (isVercelAppOrigin(origin)) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
       return callback(null, false);
     },
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     optionsSuccessStatus: 204,
   })
